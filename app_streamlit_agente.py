@@ -17,6 +17,8 @@ import json
 import requests
 import uuid
 import re
+import math
+import html
 import time
 from concurrent.futures import ThreadPoolExecutor
 from urllib.parse import quote
@@ -103,7 +105,7 @@ html, body, [class*="css"], .stApp, .stMarkdown, button, input, textarea {{
 [data-testid="stChatInputSubmitButton"] svg, [data-testid="stChatInputSubmitButton"] svg path:last-child {{ color: {MUTED} !important; fill: {MUTED} !important; }}
 [data-testid="stChatInputSubmitButton"]:not(:disabled) {{ background: {STRONG} !important; }}
 [data-testid="stChatInputSubmitButton"]:not(:disabled) svg, [data-testid="stChatInputSubmitButton"]:not(:disabled) svg path:last-child {{ color: #FFFFFF !important; fill: #FFFFFF !important; }}
-.block-container {{ max-width: 920px; padding-top: 1.6rem; padding-bottom: 8rem; }}
+.block-container {{ max-width: 920px; padding-top: 1.2rem; padding-bottom: 4.5rem; }}
 
 /* Mensajes: sin avatares, el usuario en tarjeta, el agente en texto limpio */
 [data-testid^="stChatMessageAvatar"] {{ display: none !important; }}
@@ -163,9 +165,9 @@ code {{ font-family: 'IBM Plex Mono', monospace !important; background: {PANEL} 
 
 /* Estado vacio */
 .hero {{ text-align: center; margin: 14vh 0 2.2rem 0; }}
-.hero .name {{ font-family: 'IBM Plex Mono', monospace; text-transform: uppercase; font-size: 2.3rem; font-weight: 500; color: {STRONG}; letter-spacing: 0.16em; }}
-.hero .name::after {{ content: ''; display: block; width: 54px; height: 3px; background: {AMBER}; margin: 0.7rem auto 0.2rem auto; }}
-.hero .sub {{ color: {MUTED}; margin-top: 0.4rem; font-size: 1.02rem; }}
+.hero .name {{ font-family: 'IBM Plex Mono', monospace; text-transform: uppercase; font-size: 2rem; font-weight: 500; color: {STRONG}; letter-spacing: 0.16em; }}
+.hero .name::after {{ content: ''; display: block; width: 54px; height: 3px; background: {AMBER}; margin: 0.5rem auto 0.1rem auto; }}
+.hero .sub {{ color: {MUTED}; margin-top: 0.2rem; font-size: 0.95rem; }}
 
 [data-testid="stExpander"] {{ border: 1px solid {GRID}; border-radius: 6px; background: {BG}; }}
 
@@ -190,7 +192,7 @@ code {{ font-family: 'IBM Plex Mono', monospace !important; background: {PANEL} 
 [data-testid="stPopover"] button svg, [data-testid="stPopover"] button [aria-hidden="true"], [data-testid="stPopover"] button [data-testid="stIconMaterial"] {{ display: none !important; }}
 [data-testid="stPopover"] button {{ padding: 0.3rem 0.5rem; font-size: 1.2rem; line-height: 1; }}
 .side-title {{ letter-spacing: 0.01em; }}
-.block-container .stButton > button {{ min-height: 4.2rem; align-items: flex-start; }}
+.block-container .stButton > button {{ min-height: 3.9rem; align-items: flex-start; }}
 .block-container .stButton > button p {{ white-space: normal !important; text-align: left !important; line-height: 1.45; }}
 .block-container .stButton > button p strong {{ color: {MUTED}; font-weight: 500; font-size: 0.82rem; }}
 .hero .sub2 {{ color: {MUTED}; font-size: 0.88rem; margin-top: 0.35rem; opacity: 0.85; }}
@@ -217,12 +219,11 @@ code {{ font-family: 'IBM Plex Mono', monospace !important; background: {PANEL} 
 .block-container .st-key-chips .stButton > button p {{ white-space: nowrap !important; font-size: 0.85rem; }}
 
 /* ===== Estilo terminal (blanco) ===== */
-.hero {{ margin: 3.5vh 0 1.4rem 0; }}
-.mk-title {{ font-family: 'IBM Plex Mono', monospace; font-size: 0.72rem; letter-spacing: 0.1em; color: {MUTED}; margin: 1.1rem 0 0.4rem 0; }}
+.hero {{ margin: 0 0 0.6rem 0; }}
+.mk-title {{ font-family: 'IBM Plex Mono', monospace; font-size: 0.72rem; letter-spacing: 0.1em; color: {MUTED}; margin: 0.7rem 0 0.35rem 0; }}
 .tape {{ overflow: hidden; border-top: 1px solid {GRID}; border-bottom: 1px solid {GRID}; background: {PANEL}; margin: 0 0 0.6rem 0; white-space: nowrap; }}
-.tape-in {{ display: inline-flex; animation: cinta 80s linear infinite; }}
+.tape-in {{ display: inline-flex; animation: cinta 140s linear infinite; }}
 .tape:hover .tape-in {{ animation-play-state: paused; }}
-@keyframes cinta {{ from {{ transform: translateX(0); }} to {{ transform: translateX(-50%); }} }}
 .ti {{ font-family: 'IBM Plex Mono', monospace; font-size: 0.74rem; padding: 0.42rem 1.3rem; color: {TXT}; border-right: 1px solid {GRID}; }}
 .ti b {{ color: {STRONG}; font-weight: 600; margin-right: 0.5rem; }}
 .ti i {{ font-style: normal; margin-left: 0.45rem; }}
@@ -236,7 +237,7 @@ code {{ font-family: 'IBM Plex Mono', monospace !important; background: {PANEL} 
 .mt-cols, .mt-row {{ display: grid; grid-template-columns: minmax(0,1.5fr) 1fr 0.8fr 0.8fr 56px; align-items: center; column-gap: 8px; padding: 0 0.7rem; }}
 .mt-cols {{ font-family: 'IBM Plex Mono', monospace; font-size: 0.64rem; letter-spacing: 0.06em; color: {MUTED}; border-bottom: 1px solid {GRID}; padding-top: 0.3rem; padding-bottom: 0.3rem; text-transform: uppercase; }}
 .mt-cols span:not(:first-child), .mt-row span:not(:first-child) {{ text-align: right; }}
-.mt-row {{ height: 34px; border-bottom: 1px solid {PANEL}; font-family: 'IBM Plex Mono', monospace; font-size: 0.8rem; transition: background .12s; }}
+.mt-row {{ height: 28px; border-bottom: 1px solid {PANEL}; font-family: 'IBM Plex Mono', monospace; font-size: 0.8rem; transition: background .12s; }}
 .mt-row:last-child {{ border-bottom: none; }}
 .mt-row:hover {{ background: {PANEL}; }}
 .mt-row .n {{ font-family: 'IBM Plex Sans', sans-serif; font-size: 0.82rem; color: {STRONG}; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }}
@@ -245,6 +246,81 @@ code {{ font-family: 'IBM Plex Mono', monospace !important; background: {PANEL} 
 .block-container .stButton > button:hover {{ border-left: 3px solid {NAVY} !important; }}
 [data-testid="stBottomBlockContainer"] {{ max-width: 920px !important; }}
 [data-testid="stChatInput"] textarea {{ font-family: 'IBM Plex Mono', monospace !important; font-size: 0.9rem !important; }}
+
+/* ===== Cinta fija a todo el ancho ===== */
+.tape {{ position: fixed; top: 0; left: 0; right: 0; height: 32px; z-index: 1000002; margin: 0; border-top: none; border-bottom: 1px solid {GRID}; display: flex; align-items: center; }}
+.tape-in {{ animation: cinta 140s linear infinite; }}
+@keyframes cinta {{ from {{ transform: translateX(0); }} to {{ transform: translateX(-25%); }} }}
+[data-testid="stAppViewContainer"] {{ top: 32px !important; height: auto !important; bottom: 0 !important; }}
+[data-testid="stHeader"] {{ top: 32px !important; }}
+[data-testid="stElementContainer"]:has(.tape) {{ height: 0 !important; min-height: 0 !important; margin: 0 !important; padding: 0 !important; }}
+.block-container {{ padding-top: 2.4rem; }}
+
+/* ===== Autor abajo del todo en la barra lateral ===== */
+[data-testid="stSidebarUserContent"] > div > [data-testid="stVerticalBlock"] {{ min-height: calc(100vh - 9rem); }}
+[data-testid="stSidebarUserContent"] [data-testid="stElementContainer"]:has(.side-foot) {{ margin-top: auto; }}
+.side-foot {{ margin-top: 0 !important; }}
+
+/* ===== Texto legible en las respuestas (tablas, titulos) aunque el navegador este en modo oscuro ===== */
+[data-testid="stMarkdownContainer"] h1, [data-testid="stMarkdownContainer"] h2, [data-testid="stMarkdownContainer"] h3, [data-testid="stMarkdownContainer"] h4 {{ color: {STRONG} !important; font-weight: 600; }}
+[data-testid="stMarkdownContainer"] p, [data-testid="stMarkdownContainer"] li, [data-testid="stMarkdownContainer"] em {{ color: {TXT}; }}
+[data-testid="stMarkdownContainer"] table {{ width: 100%; border-collapse: collapse; background: {BG}; border: 1px solid {GRID}; margin: 0.6rem 0 1rem 0; font-size: 0.86rem; }}
+[data-testid="stMarkdownContainer"] thead th {{ background: {NAVY} !important; color: #FFFFFF !important; font-family: 'IBM Plex Mono', monospace; font-size: 0.72rem; font-weight: 500; letter-spacing: 0.04em; text-transform: uppercase; padding: 0.5rem 0.75rem; border: 1px solid {NAVY}; text-align: left; }}
+[data-testid="stMarkdownContainer"] tbody td {{ background: {BG} !important; color: {TXT} !important; padding: 0.5rem 0.75rem; border: 1px solid {GRID}; vertical-align: top; }}
+[data-testid="stMarkdownContainer"] tbody tr:nth-child(even) td {{ background: #F7F9FB !important; }}
+[data-testid="stMarkdownContainer"] tbody td:first-child {{ color: {STRONG} !important; font-weight: 500; font-family: 'IBM Plex Sans', sans-serif; }}
+[data-testid="stMarkdownContainer"] tbody td code {{ background: transparent !important; color: {STRONG} !important; padding: 0; font-size: 0.86rem; }}
+[data-testid="stChatMessage"] h1 {{ font-size: 1.45rem; }}
+[data-testid="stChatMessage"] h2 {{ font-size: 1.2rem; margin-top: 1.2rem; }}
+[data-testid="stChatMessage"] h3 {{ font-size: 1.05rem; }}
+
+/* ===== Paneles de mercado clicables ===== */
+[class*="st-key-panel_"] {{ border: 1px solid {GRID}; border-radius: 4px; background: {BG}; overflow: hidden; gap: 0 !important; margin-bottom: 0.2rem; }}
+[class*="st-key-row_"] {{ position: relative; gap: 0 !important; height: 28px !important; min-height: 28px; }}
+[class*="st-key-row_"] > [data-testid="stElementContainer"]:first-child {{ height: 28px !important; }}
+[class*="st-key-hd_"] {{ gap: 0 !important; height: 52px !important; min-height: 52px; }}
+[class*="st-key-hd_"] > [data-testid="stElementContainer"]:first-child {{ height: 52px !important; }}
+.mt-head {{ height: 28px; box-sizing: border-box; }}
+.mt-cols {{ height: 24px; box-sizing: border-box; padding-top: 0 !important; padding-bottom: 0 !important; }}
+.block-container [class*="st-key-row_"] [data-testid="stElementContainer"]:has(.stButton) {{ position: absolute; inset: 0; width: 100% !important; margin: 0; }}
+.block-container [class*="st-key-row_"] .stButton, .block-container [class*="st-key-row_"] .stButton button {{ width: 100% !important; height: 100% !important; }}
+.block-container [class*="st-key-row_"] .stButton button {{ opacity: 0 !important; min-height: 0 !important; padding: 0 !important; border-radius: 0 !important; cursor: pointer; transform: none !important; box-shadow: none !important; border: none !important; }}
+[class*="st-key-row_"]:hover .mt-row {{ background: {PANEL}; }}
+.mt-grid, .mt {{ display: block; }}
+[class*="st-key-panel_"] .mt-row {{ border-bottom: 1px solid {PANEL}; }}
+
+/* ===== Buscador y selector de rango ===== */
+[data-testid="stTextInput"] input {{ background: {BG} !important; color: {STRONG} !important; -webkit-text-fill-color: {STRONG} !important; font-family: 'IBM Plex Mono', monospace !important; font-size: 0.82rem !important; }}
+[data-testid="stTextInput"] input::placeholder {{ color: {MUTED} !important; -webkit-text-fill-color: {MUTED} !important; }}
+[data-testid="stTextInput"] div[data-baseweb="input"], [data-testid="stTextInput"] div[data-baseweb="base-input"] {{ background: {BG} !important; border: 1px solid {GRID}; border-radius: 6px; }}
+[data-testid="stButtonGroup"] button {{ background: {BG} !important; color: {TXT} !important; border: 1px solid {GRID} !important; border-radius: 4px !important; font-family: 'IBM Plex Mono', monospace; font-size: 0.78rem; min-height: 0 !important; padding: 0.25rem 0.7rem !important; }}
+[data-testid="stButtonGroup"] button p {{ color: inherit !important; font-size: 0.78rem; }}
+[data-testid="stButtonGroup"] button[aria-checked="true"], [data-testid="stButtonGroup"] button[aria-pressed="true"], [data-testid="stButtonGroup"] button[data-testid="stBaseButton-segmented_controlActive"], [data-testid="stButtonGroup"] button[kind="segmented_controlActive"] {{ background: {NAVY} !important; color: #FFFFFF !important; border-color: {NAVY} !important; }}
+
+/* ===== Ficha del activo (ventana) ===== */
+[data-testid="stDialog"] > div, [data-testid="stDialog"] section[role="dialog"] {{ background: {BG} !important; }}
+[data-testid="stDialog"] > div {{ border-radius: 8px; border: 1px solid {GRID}; }}
+[data-testid="stDialog"] h1, [data-testid="stDialog"] h2, [data-testid="stDialog"] [data-testid="stDialogTitle"] {{ color: {STRONG} !important; font-family: 'IBM Plex Mono', monospace; font-size: 0.9rem !important; letter-spacing: 0.08em; text-transform: uppercase; }}
+[data-testid="stDialog"] button[aria-label="Close"], [data-testid="stDialog"] button[aria-label="Close"] * {{ color: {STRONG} !important; background: transparent !important; }}
+[data-testid="stDialog"] [data-testid="stCaptionContainer"], [data-testid="stDialog"] [data-testid="stCaptionContainer"] * {{ color: {MUTED} !important; font-size: 0.74rem; }}
+.fh {{ margin-bottom: 0.4rem; }}
+.fh-n {{ font-size: 1.15rem; font-weight: 600; color: {STRONG}; }}
+.fh .tag {{ display: inline-block; font-family: 'IBM Plex Mono', monospace; font-size: 0.68rem; color: {MUTED}; border: 1px solid {GRID}; border-radius: 3px; padding: 1px 6px; margin: 4px 6px 0 0; }}
+.fh-p {{ font-family: 'IBM Plex Mono', monospace; display: flex; align-items: baseline; gap: 14px; margin-top: 0.5rem; }}
+.fh-p span:first-child {{ font-size: 2.1rem; font-weight: 500; color: {STRONG}; }}
+.fh-p span:last-child {{ font-size: 1rem; }}
+.sec-t {{ font-family: 'IBM Plex Mono', monospace; font-size: 0.68rem; letter-spacing: 0.1em; color: {MUTED}; margin: 1rem 0 0.35rem 0; padding-bottom: 0.25rem; border-bottom: 1px solid {GRID}; }}
+.tl-grid {{ display: grid; grid-template-columns: repeat(var(--c, 4), 1fr); gap: 8px; }}
+@media (max-width: 640px) {{ .tl-grid {{ grid-template-columns: repeat(2, 1fr); }} }}
+.tl {{ border: 1px solid {GRID}; border-radius: 4px; padding: 0.45rem 0.6rem; background: {BG}; }}
+.tl span {{ display: block; font-size: 0.68rem; color: {MUTED}; }}
+.tl b {{ display: block; font-family: 'IBM Plex Mono', monospace; font-size: 0.86rem; font-weight: 500; color: {STRONG}; margin-top: 2px; }}
+.rb {{ position: relative; height: 4px; background: {GRID}; border-radius: 2px; margin-top: 6px; }}
+.rb i {{ position: absolute; top: -3px; width: 3px; height: 10px; background: {NAVY}; border-radius: 1px; transform: translateX(-50%); }}
+.st-key-analizar_ficha button {{ background: {NAVY} !important; border: 1px solid {NAVY} !important; }}
+.st-key-analizar_ficha button, .st-key-analizar_ficha button p {{ color: #FFFFFF !important; }}
+.st-key-analizar_ficha button:hover {{ background: {BLUE} !important; border-left: 1px solid {BLUE} !important; }}
+.perfil {{ margin-top: 0.6rem; font-size: 0.8rem; color: {MUTED}; }}
 </style>
 """, unsafe_allow_html=True)
 
@@ -1075,21 +1151,34 @@ def process_response(client: Groq, memory_messages: list, summary: str, user_tex
 # =========================
 
 GRUPOS_MERCADO = [
-    ("Renta variable y cripto", [
-        ("S&amp;P 500", "^GSPC", "idx"), ("Nasdaq 100", "^NDX", "idx"),
+    ("Índices y cripto", [
+        ("S&P 500", "^GSPC", "idx"), ("Nasdaq 100", "^NDX", "idx"),
         ("Dow Jones", "^DJI", "idx"), ("VIX", "^VIX", "idx"),
         ("Bitcoin", "BTC-USD", "usd0")]),
     ("Divisas, materias primas y tasas", [
         ("EUR / USD", "EURUSD=X", "fx"), ("USD / GTQ", "GTQ=X", "fx"),
         ("Oro", "GC=F", "usd"), ("Petróleo WTI", "CL=F", "usd"),
         ("Bono EE. UU. 10a", "^TNX", "yld")]),
+    ("Acciones destacadas", [
+        ("NVIDIA", "NVDA", "usd"), ("Apple", "AAPL", "usd"),
+        ("Microsoft", "MSFT", "usd"), ("Tesla", "TSLA", "usd"),
+        ("AMD", "AMD", "usd")]),
+    ("ETFs", [
+        ("SPY · S&P 500", "SPY", "usd"), ("QQQ · Nasdaq 100", "QQQ", "usd"),
+        ("GLD · Oro", "GLD", "usd"), ("TLT · Bonos 20a+", "TLT", "usd"),
+        ("IWM · Russell 2000", "IWM", "usd")]),
 ]
+UA = {"User-Agent": "Mozilla/5.0"}
+
+
+def _esc(t):
+    return html.escape(str(t))
 
 
 def _tarjeta_mercado(simbolo):
     url = (f"https://query1.finance.yahoo.com/v8/finance/chart/{quote(simbolo)}"
            "?range=1mo&interval=1d")
-    r = requests.get(url, headers={"User-Agent": "Mozilla/5.0"}, timeout=6)
+    r = requests.get(url, headers=UA, timeout=6)
     r.raise_for_status()
     res = r.json()["chart"]["result"][0]
     cierres = [c for c in res["indicators"]["quote"][0]["close"] if c is not None]
@@ -1141,35 +1230,6 @@ def _formato(tipo, d):
     return f"{p:,.2f}", f"{a:+,.2f}"
 
 
-def panel_mercados_html():
-    datos = datos_mercado()
-    if not datos:
-        return ""
-    paneles = []
-    for titulo, lista in GRUPOS_MERCADO:
-        filas = []
-        for nombre, simbolo, tipo in lista:
-            d = datos.get(simbolo)
-            if not d:
-                continue
-            color = UP if d["pct"] >= 0 else DOWN
-            precio, var = _formato(tipo, d)
-            filas.append(
-                f'<div class="mt-row"><span class="n">{nombre}</span>'
-                f'<span class="p">{precio}</span>'
-                f'<span style="color:{color}">{var}</span>'
-                f'<span style="color:{color}">{d["pct"]:+.2f}%</span>'
-                f'{_spark(d["serie"], color)}</div>')
-        if filas:
-            paneles.append(
-                f'<div class="mt"><div class="mt-head"><span>{titulo.upper()}</span>'
-                f'<span class="live">EN VIVO</span></div>'
-                '<div class="mt-cols"><span>Instrumento</span><span>Último</span>'
-                '<span>Var.</span><span>Var. %</span><span>1M</span></div>'
-                f'{"".join(filas)}</div>')
-    return f'<div class="mt-grid">{"".join(paneles)}</div>' if paneles else ""
-
-
 def cinta_mercados_html():
     datos = datos_mercado()
     items = []
@@ -1181,11 +1241,349 @@ def cinta_mercados_html():
             color = UP if d["pct"] >= 0 else DOWN
             flecha = "▲" if d["pct"] >= 0 else "▼"
             precio, _ = _formato(tipo, d)
-            items.append(f'<span class="ti"><b>{nombre}</b>{precio}'
+            items.append(f'<span class="ti"><b>{_esc(nombre)}</b>{precio}'
                          f'<i style="color:{color}">{flecha} {abs(d["pct"]):.2f}%</i></span>')
     if not items:
         return ""
-    return f'<div class="tape"><div class="tape-in">{"".join(items)}{"".join(items)}</div></div>'
+    # 4 copias y desplazamiento de 25%: la cinta nunca queda con huecos, ni en pantallas muy anchas
+    return f'<div class="tape"><div class="tape-in">{"".join(items) * 4}</div></div>'
+
+
+# =========================
+# PANELES CLICABLES + FICHA DEL ACTIVO
+# =========================
+
+def seleccionar(simbolo, nombre):
+    st.session_state.abrir = (simbolo, nombre)
+
+
+def buscar_simbolo():
+    v = (st.session_state.get("buscar") or "").strip().upper()
+    if v:
+        st.session_state.abrir = (v, v)
+    st.session_state.buscar = ""
+
+
+def mostrar_paneles():
+    """Tablas de mercado: cada fila es clicable (un boton invisible cubre la fila)."""
+    datos = datos_mercado()
+    if not datos:
+        return
+    for inicio in range(0, len(GRUPOS_MERCADO), 2):
+        cols = st.columns(2, gap="small")
+        for col, (g, (titulo, lista)) in zip(cols, list(enumerate(GRUPOS_MERCADO))[inicio:inicio + 2]):
+            with col, st.container(key=f"panel_{g}"):
+                with st.container(key=f"hd_{g}"):
+                    st.markdown(
+                        f'<div class="mt-head"><span>{_esc(titulo).upper()}</span>'
+                        '<span class="live">EN VIVO</span></div>'
+                        '<div class="mt-cols"><span>Instrumento</span><span>Último</span>'
+                        '<span>Var.</span><span>Var. %</span><span>1M</span></div>',
+                        unsafe_allow_html=True)
+                for j, (nombre, simbolo, tipo) in enumerate(lista):
+                    d = datos.get(simbolo)
+                    if not d:
+                        continue
+                    color = UP if d["pct"] >= 0 else DOWN
+                    precio, var = _formato(tipo, d)
+                    with st.container(key=f"row_{g}_{j}"):
+                        st.markdown(
+                            f'<div class="mt-row"><span class="n">{_esc(nombre)}</span>'
+                            f'<span class="p">{precio}</span>'
+                            f'<span style="color:{color}">{var}</span>'
+                            f'<span style="color:{color}">{d["pct"]:+.2f}%</span>'
+                            f'{_spark(d["serie"], color)}</div>', unsafe_allow_html=True)
+                        st.button("Ver ficha", key=f"sel_{g}_{j}",
+                                  on_click=seleccionar, args=(simbolo, nombre))
+
+
+# ---- datos de la ficha ----
+
+RANGOS = {"1M": ("1mo", "1d"), "3M": ("3mo", "1d"), "6M": ("6mo", "1d"),
+          "1A": ("1y", "1d"), "5A": ("5y", "1wk")}
+
+
+@st.cache_data(ttl=600, show_spinner=False)
+def historial_activo(simbolo, rango, intervalo):
+    url = (f"https://query1.finance.yahoo.com/v8/finance/chart/{quote(simbolo)}"
+           f"?range={rango}&interval={intervalo}")
+    r = requests.get(url, headers=UA, timeout=10)
+    r.raise_for_status()
+    res = r.json()["chart"]["result"][0]
+    meta = res["meta"]
+    q = res["indicators"]["quote"][0]
+    try:
+        tz = ZoneInfo(meta.get("exchangeTimezoneName", "America/New_York"))
+    except Exception:
+        tz = ZoneInfo("America/New_York")
+    filas = []
+    for t, o, h, l, c, v in zip(res["timestamp"], q["open"], q["high"], q["low"],
+                                q["close"], q["volume"]):
+        if c is None:
+            continue
+        filas.append({"fecha": datetime.fromtimestamp(t, tz).date().isoformat(),
+                      "open": o if o is not None else c, "high": h if h is not None else c,
+                      "low": l if l is not None else c, "close": c, "volume": v or 0})
+    if not filas:
+        raise ValueError("Sin datos")
+    return {"meta": meta, "filas": filas}
+
+
+@st.cache_resource(ttl=3000, show_spinner=False)
+def _sesion_yahoo():
+    s = requests.Session()
+    s.headers.update(UA)
+    try:
+        s.get("https://fc.yahoo.com", timeout=6)      # entrega la cookie (responde 404, es normal)
+    except Exception:
+        pass
+    crumb = s.get("https://query1.finance.yahoo.com/v1/test/getcrumb", timeout=6).text
+    if not crumb or "<" in crumb or "Too Many" in crumb:
+        raise ValueError("Sin crumb")
+    return s, crumb
+
+
+@st.cache_data(ttl=3600, show_spinner=False)
+def _fundamentales_yahoo(simbolo):
+    s, crumb = _sesion_yahoo()
+    r = s.get(f"https://query1.finance.yahoo.com/v10/finance/quoteSummary/{quote(simbolo)}",
+              params={"modules": "summaryDetail,defaultKeyStatistics,financialData,assetProfile,price",
+                      "crumb": crumb}, timeout=8)
+    r.raise_for_status()
+    res = r.json()["quoteSummary"]["result"][0]
+
+    def g(mod, campo):
+        v = (res.get(mod) or {}).get(campo)
+        if isinstance(v, dict):
+            v = v.get("raw")
+        return v
+    return {
+        "cap": g("price", "marketCap") or g("summaryDetail", "marketCap"),
+        "pe": g("summaryDetail", "trailingPE"), "pe_fwd": g("summaryDetail", "forwardPE"),
+        "eps": g("defaultKeyStatistics", "trailingEps"),
+        "div": g("summaryDetail", "dividendYield"), "beta": g("summaryDetail", "beta"),
+        "pb": g("defaultKeyStatistics", "priceToBook"),
+        "margen": g("financialData", "profitMargins"),
+        "objetivo": g("financialData", "targetMeanPrice"),
+        "recom": g("financialData", "recommendationKey"),
+        "sector": (res.get("assetProfile") or {}).get("sector"),
+        "industria": (res.get("assetProfile") or {}).get("industry"),
+        "pais": (res.get("assetProfile") or {}).get("country"),
+        "empleados": (res.get("assetProfile") or {}).get("fullTimeEmployees"),
+    }
+
+
+def fundamentales(simbolo):
+    try:
+        return _fundamentales_yahoo(simbolo)
+    except Exception as e:
+        print(f"[Fundamentales] {simbolo}: {e}")
+        return {}
+
+
+def estadisticas_tecnicas(filas):
+    """Rendimientos, volatilidad y drawdown calculados a partir de 1 anio de cierres diarios."""
+    c = [f["close"] for f in filas]
+    n = len(c)
+
+    def rend(k):
+        return (c[-1] / c[-1 - k] - 1) * 100 if n > k and c[-1 - k] else None
+    anio = filas[-1]["fecha"][:4]
+    previos = [f["close"] for f in filas if f["fecha"][:4] < anio]
+    base_ytd = previos[-1] if previos else c[0]
+    vol = None
+    if n > 31:
+        r = [math.log(c[i] / c[i - 1]) for i in range(n - 30, n) if c[i - 1] > 0 and c[i] > 0]
+        if len(r) > 5:
+            m = sum(r) / len(r)
+            vol = math.sqrt(sum((x - m) ** 2 for x in r) / (len(r) - 1)) * math.sqrt(252) * 100
+    pico, mdd = c[0], 0.0
+    for x in c:
+        pico = max(pico, x)
+        mdd = min(mdd, (x / pico - 1) * 100)
+    return {"r1m": rend(21), "r3m": rend(63), "r6m": rend(126),
+            "ytd": (c[-1] / base_ytd - 1) * 100 if base_ytd else None,
+            "r1a": (c[-1] / c[0] - 1) * 100 if n > 200 and c[0] else None,
+            "vol30": vol, "mdd": mdd}
+
+
+def _num(x, dec=2, pref="", suf=""):
+    return "—" if x is None else f"{pref}{x:,.{dec}f}{suf}"
+
+
+def _grande(x, pref="$"):
+    if x is None:
+        return "—"
+    for lim, suf in ((1e12, " T"), (1e9, " B"), (1e6, " M")):
+        if abs(x) >= lim:
+            return f"{pref}{x / lim:,.2f}{suf}"
+    return f"{pref}{x:,.0f}"
+
+
+def _pct_html(x, dec=2):
+    if x is None:
+        return "—", None
+    return f"{x:+.{dec}f}%", (UP if x >= 0 else DOWN)
+
+
+def _tile(label, valor, color=None, extra=""):
+    estilo = f' style="color:{color}"' if color else ""
+    return f'<div class="tl"><span>{label}</span><b{estilo}>{valor}</b>{extra}</div>'
+
+
+def _barra_rango(bajo, alto, actual):
+    if bajo is None or alto is None or alto <= bajo or actual is None:
+        return ""
+    pos = min(max((actual - bajo) / (alto - bajo) * 100, 0), 100)
+    return f'<div class="rb"><i style="left:{pos:.0f}%"></i></div>'
+
+
+def _seccion(titulo, tiles, cols=4):
+    tiles = [t for t in tiles if t]
+    if not tiles:
+        return ""
+    return (f'<div class="sec-t">{titulo}</div>'
+            f'<div class="tl-grid" style="--c:{cols}">{"".join(tiles)}</div>')
+
+
+def grafica_detalle(filas, simbolo, rango_lbl):
+    fechas = [f["fecha"] for f in filas]
+    cierres = [f["close"] for f in filas]
+    n = len(cierres)
+    sube = cierres[-1] >= cierres[0]
+    color = UP if sube else DOWN
+    hay_vol = sum(f["volume"] for f in filas) > 0
+    if hay_vol:
+        fig = make_subplots(rows=2, cols=1, shared_xaxes=True, vertical_spacing=0.03,
+                            row_heights=[0.78, 0.22])
+    else:
+        fig = make_subplots(rows=1, cols=1)
+    lo, hi = min(cierres), max(cierres)
+    margen = (hi - lo) * 0.12 or 1
+    base = lo - margen
+    fig.add_trace(go.Scatter(x=fechas, y=[base] * n, mode="lines", line=dict(width=0),
+                             hoverinfo="skip"), row=1, col=1)
+    fig.add_trace(go.Scatter(
+        x=fechas, y=cierres, mode="lines", line=dict(width=2.2, color=color),
+        fill="tonexty", fillcolor=hex_a_rgba(color, 0.08),
+        hovertemplate="<b>%{y:,.2f}</b>  ·  %{x}<extra></extra>"), row=1, col=1)
+    fig.add_annotation(x=fechas[-1], y=cierres[-1], text=f"{cierres[-1]:,.2f}", showarrow=False,
+                       xanchor="right", yshift=16, row=1, col=1,
+                       font=dict(family=FUENTE_NUM, size=12, color="#FFFFFF"),
+                       bgcolor=color, borderpad=3)
+    if hay_vol:
+        colores = [hex_a_rgba(UP if f["close"] >= f["open"] else DOWN, 0.55) for f in filas]
+        fig.add_trace(go.Bar(x=fechas, y=[f["volume"] for f in filas], marker_color=colores,
+                             hovertemplate="Vol. %{y:,.0f}<extra></extra>"), row=2, col=1)
+    estilo_base(fig, "", "", altura=380 if hay_vol else 320)
+    fig.update_layout(title=None, margin=dict(l=8, r=72, t=14, b=54))
+    fig.update_yaxes(range=[base, hi + margen], row=1, col=1)
+    fig.update_yaxes(showgrid=False, showticklabels=False, row=2, col=1)
+    formato = "%b %Y" if rango_lbl in ("1A", "5A") else "%b %d"
+    if not simbolo.upper().endswith("-USD"):
+        fig.update_xaxes(type="date", tickformat=formato, rangebreaks=[dict(bounds=["sat", "mon"])])
+    else:
+        fig.update_xaxes(type="date", tickformat=formato)
+    return fig
+
+
+def contenido_detalle(simbolo, nombre):
+    try:
+        base = historial_activo(simbolo, "1y", "1d")
+    except Exception as e:
+        print(f"[Ficha] {simbolo}: {e}")
+        st.error(f"No encontré datos para «{simbolo}». Probá con otro símbolo de Yahoo Finance "
+                 "(por ejemplo AAPL, MSFT, ^GSPC o EURUSD=X).")
+        return
+    meta, f1a = base["meta"], base["filas"]
+    cierres = [f["close"] for f in f1a]
+    precio = meta.get("regularMarketPrice") or cierres[-1]
+    previo = cierres[-2] if len(cierres) > 1 else cierres[0]
+    cam = precio - previo
+    pct = cam / previo * 100 if previo else 0.0
+    color = UP if cam >= 0 else DOWN
+    titulo = meta.get("longName") or meta.get("shortName") or nombre
+    bolsa = meta.get("fullExchangeName") or meta.get("exchangeName") or ""
+    moneda = meta.get("currency") or ""
+    tipo = (meta.get("instrumentType") or "").replace("_", " ")
+    etiquetas = " ".join(f'<span class="tag">{_esc(t)}</span>' for t in
+                         (simbolo.upper(), bolsa, moneda, tipo) if t)
+    dec = 4 if abs(precio) < 20 else 2
+    st.markdown(
+        f'<div class="fh"><div class="fh-n">{_esc(titulo)}</div><div>{etiquetas}</div>'
+        f'<div class="fh-p"><span>{precio:,.{dec}f}</span>'
+        f'<span style="color:{color}">{"▲" if cam >= 0 else "▼"} {cam:+,.{dec}f}  ({pct:+.2f}%)</span></div></div>',
+        unsafe_allow_html=True)
+
+    rango_lbl = st.segmented_control("Rango", list(RANGOS), default="3M", key="rango_ficha",
+                                     label_visibility="collapsed") or "3M"
+    try:
+        hist = base if rango_lbl == "1A" else historial_activo(simbolo, *RANGOS[rango_lbl])
+        st.plotly_chart(grafica_detalle(hist["filas"], simbolo, rango_lbl),
+                        use_container_width=True, config=PLOT_CONFIG, key=f"det_{simbolo}_{rango_lbl}")
+    except Exception as e:
+        print(f"[Ficha grafica] {simbolo}: {e}")
+        st.caption("No se pudo cargar la gráfica de ese rango.")
+
+    t = estadisticas_tecnicas(f1a)
+    h = f1a[-1]
+    vol_prom = sum(f["volume"] for f in f1a[-63:]) / max(len(f1a[-63:]), 1)
+    d_bajo, d_alto = meta.get("regularMarketDayLow"), meta.get("regularMarketDayHigh")
+    a_bajo, a_alto = meta.get("fiftyTwoWeekLow"), meta.get("fiftyTwoWeekHigh")
+    rend = []
+    for etq, k in (("1 mes", "r1m"), ("3 meses", "r3m"), ("6 meses", "r6m"), ("En el año", "ytd"), ("1 año", "r1a")):
+        txt, col = _pct_html(t[k])
+        rend.append(_tile(etq, txt, col))
+    html_ficha = _seccion("RENDIMIENTO", rend, 5)
+    html_ficha += _seccion("PRECIO Y VOLUMEN", [
+        _tile("Cierre anterior", _num(previo, dec)),
+        _tile("Apertura", _num(h["open"], dec)),
+        _tile("Rango del día", f'{_num(d_bajo, dec)} – {_num(d_alto, dec)}', None, _barra_rango(d_bajo, d_alto, precio)),
+        _tile("Rango 52 sem.", f'{_num(a_bajo, dec)} – {_num(a_alto, dec)}', None, _barra_rango(a_bajo, a_alto, precio)),
+        _tile("Volumen", _grande(meta.get("regularMarketVolume"), "") if meta.get("regularMarketVolume") else "—"),
+        _tile("Vol. promedio (3M)", _grande(vol_prom, "") if vol_prom else "—"),
+    ])
+    html_ficha += _seccion("RIESGO", [
+        _tile("Volatilidad 30d (anual.)", _num(t["vol30"], 1, "", "%")),
+        _tile("Máx. drawdown (1A)", _num(t["mdd"], 1, "", "%"), DOWN if t["mdd"] < 0 else None),
+    ], 4)
+    st.markdown(html_ficha, unsafe_allow_html=True)
+
+    fu = fundamentales(simbolo)
+    if fu:
+        div = fu.get("div")
+        recom = (fu.get("recom") or "").replace("_", " ").capitalize() or "—"
+        fund = [
+            _tile("Capitalización", _grande(fu.get("cap")) if fu.get("cap") else "—"),
+            _tile("P/E (TTM)", _num(fu.get("pe"))),
+            _tile("P/E (adelantado)", _num(fu.get("pe_fwd"))),
+            _tile("BPA (TTM)", _num(fu.get("eps"), 2, "$")),
+            _tile("Rend. por dividendo", _num(div * 100 if div is not None else None, 2, "", "%")),
+            _tile("Beta", _num(fu.get("beta"))),
+            _tile("Precio / valor libros", _num(fu.get("pb"))),
+            _tile("Margen neto", _num(fu["margen"] * 100 if fu.get("margen") is not None else None, 1, "", "%")),
+            _tile("Precio objetivo", _num(fu.get("objetivo"), 2, "$")),
+            _tile("Recomendación", _esc(recom)),
+        ]
+        html_f = _seccion("FUNDAMENTALES", [x for x in fund if "—</b>" not in x], 5)
+        perfil = [p for p in (fu.get("sector"), fu.get("industria"), fu.get("pais")) if p]
+        if perfil:
+            html_f += f'<div class="perfil">{_esc(" · ".join(perfil))}</div>'
+        st.markdown(html_f, unsafe_allow_html=True)
+    st.caption("Datos de Yahoo Finance, pueden tener unos minutos de retraso. "
+               "Rendimiento, volatilidad y drawdown calculados por Macroscopio con 1 año de cierres diarios.")
+
+    if st.button("Analizar con Macroscopio", icon=":material/insights:", key="analizar_ficha",
+                 type="primary"):
+        pedir(f"Analizá {titulo} ({simbolo.upper()}): variación y volatilidad del último mes")
+        st.rerun()
+
+
+def abrir_ficha(simbolo, nombre):
+    @st.dialog(nombre, width="large")
+    def _ventana():
+        contenido_detalle(simbolo, nombre)
+    _ventana()
 
 
 # =========================
@@ -1313,17 +1711,24 @@ if not st.session_state.chat_history and not consulta_pendiente:
     st.markdown(
         f'<div class="hero"><div class="name">{APP_NAME}</div>'
         f'<div class="sub">{APP_TAGLINE}</div>'
-        '<div class="sub2">Datos del Banco Mundial, Yahoo Finance y open.er-api, con gráficas.</div></div>',
+        '</div>',
         unsafe_allow_html=True,
     )
-    st.markdown(panel_mercados_html(), unsafe_allow_html=True)
+    mostrar_paneles()
+    st.text_input("Buscar símbolo", key="buscar", on_change=buscar_simbolo,
+                  placeholder="Buscar cualquier símbolo de Yahoo Finance (AAPL, MSFT, ^GSPC, EURUSD=X) y presionar Enter",
+                  label_visibility="collapsed")
     st.markdown('<div class="mk-title">CONSULTAS SUGERIDAS</div>', unsafe_allow_html=True)
-    columnas = st.columns(2)
+    columnas = st.columns(len(EJEMPLOS))
     for i, (categoria, ejemplo) in enumerate(EJEMPLOS):
-        with columnas[i % 2]:
+        with columnas[i]:
             if st.button(f"**{categoria}**  \n{ejemplo}", key=f"ej_{i}", use_container_width=True):
                 st.session_state.pending_query = ejemplo
                 st.rerun()
+
+_abrir = st.session_state.pop("abrir", None)
+if _abrir:
+    abrir_ficha(*_abrir)
 
 for idx, message in enumerate(st.session_state.chat_history):
     with st.chat_message(message["role"]):
