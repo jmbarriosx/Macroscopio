@@ -74,7 +74,8 @@ DOWN = "#C44E52"      # baja (rojo seaborn)
 st.set_page_config(
     page_title=f"{APP_NAME}",
     page_icon=None,
-    layout="centered"
+    layout="centered",
+    initial_sidebar_state="expanded",
 )
 
 st.markdown(f"""
@@ -86,7 +87,16 @@ html, body, [class*="css"], .stApp, .stMarkdown, button, input, textarea {{
 }}
 .stApp {{ background: {APP_BG}; color: {TXT}; }}
 [data-testid="stHeader"] {{ background: transparent; }}
-[data-testid="stToolbar"], [data-testid="stDecoration"], #MainMenu, footer {{ display: none !important; }}
+[data-testid="stDecoration"], #MainMenu, footer, [data-testid="stMainMenu"], [data-testid="stAppDeployButton"], [data-testid="stToolbarActions"] {{ display: none !important; }}
+/* El boton para abrir/cerrar la barra lateral SIEMPRE visible */
+[data-testid="stToolbar"] {{ background: transparent !important; }}
+[data-testid="stExpandSidebarButton"], [data-testid="stSidebarCollapsedControl"], [data-testid="collapsedControl"] {{ display: flex !important; visibility: visible !important; opacity: 1 !important; }}
+[data-testid="stExpandSidebarButton"], [data-testid="stExpandSidebarButton"] *, [data-testid="stSidebarCollapsedControl"] *, [data-testid="stSidebarCollapseButton"] * {{ color: {STRONG} !important; fill: {STRONG} !important; background: transparent !important; }}
+/* Boton de enviar visible aunque el navegador este en modo oscuro */
+[data-testid="stChatInputSubmitButton"] {{ background: {PANEL} !important; color: {MUTED} !important; }}
+[data-testid="stChatInputSubmitButton"] svg, [data-testid="stChatInputSubmitButton"] svg path:last-child {{ color: {MUTED} !important; fill: {MUTED} !important; }}
+[data-testid="stChatInputSubmitButton"]:not(:disabled) {{ background: {STRONG} !important; }}
+[data-testid="stChatInputSubmitButton"]:not(:disabled) svg, [data-testid="stChatInputSubmitButton"]:not(:disabled) svg path:last-child {{ color: #FFFFFF !important; fill: #FFFFFF !important; }}
 .block-container {{ max-width: 760px; padding-top: 2.5rem; padding-bottom: 8rem; }}
 
 /* Mensajes: sin avatares, el usuario en tarjeta, el agente en texto limpio */
