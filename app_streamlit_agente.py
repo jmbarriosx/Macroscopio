@@ -167,6 +167,20 @@ code {{ font-family: 'IBM Plex Mono', monospace !important; background: {PANEL} 
 [data-testid="stSidebar"] .stButton > button p {{ color: {TXT} !important; }}
 [data-testid="stPopover"] > div > button, [data-testid="stPopoverButton"] {{ background: transparent !important; color: {MUTED} !important; border: none !important; }}
 [data-testid="stExpander"] summary, [data-testid="stExpander"] details {{ background: {BG} !important; color: {TXT} !important; }}
+
+/* Mejoras de interfaz */
+.block-container .stButton > button [data-testid="stMarkdownContainer"] p {{ display: block !important; text-align: left; margin: 0 0 .15rem 0; }}
+[data-testid="stPopover"] button svg, [data-testid="stPopover"] button [aria-hidden="true"], [data-testid="stPopover"] button [data-testid="stIconMaterial"] {{ display: none !important; }}
+[data-testid="stPopover"] button {{ padding: 0.3rem 0.5rem; font-size: 1.2rem; line-height: 1; }}
+.side-title {{ letter-spacing: 0.01em; }}
+.block-container .stButton > button {{ min-height: 4.2rem; align-items: flex-start; }}
+.block-container .stButton > button p {{ white-space: normal !important; text-align: left !important; line-height: 1.45; }}
+.block-container .stButton > button p strong {{ color: {MUTED}; font-weight: 500; font-size: 0.82rem; }}
+.hero .sub2 {{ color: {MUTED}; font-size: 0.88rem; margin-top: 0.35rem; opacity: 0.85; }}
+[data-testid="stCaptionContainer"] {{ color: {MUTED}; }}
+[data-testid="stStatusWidget"], [data-testid="stExpander"] details {{ border-radius: 10px; }}
+.modebar {{ opacity: 0.55; }}
+.modebar-btn {{ font-size: 18px !important; }}
 </style>
 """, unsafe_allow_html=True)
 
@@ -196,19 +210,101 @@ INDEX_FILE = os.path.join(CHATS_DIR, "index.json")
 os.makedirs(CHATS_DIR, exist_ok=True)
 
 
-def _leer_json(path, default):
+# --- Supabase (opcional): base de datos en la nube para que los chats no se pierdan ---
+# Si SUPABASE_URL y SUPABASE_KEY existen, todo lo que se guarda en disco se copia tambien a
+# la tabla "kv" de Supabase, y si el archivo local no existe (p. ej. la app en la nube se
+# reinicio) se recupera desde ahi. Sin esas variables, todo funciona solo con archivos.
+SUPABASE_URL = (os.environ.get("SUPABASE_URL") or "").rstrip("/")
+SUPABASE_KEY = os.environ.get("SUPABASE_KEY") or ""
+SUPABASE_ON = bool(SUPABASE_URL and SUPABASE_KEY)
+SUPABASE_TABLA = "kv"
+
+
+def _sb_headers(extra=None):
+    h = {"apikey": SUPABASE_KEY, "Authorization": f"Bearer {SUPABASE_KEY}",
+         "Content-Type": "application/json"}
+    h.update(extra or {})
+    return h
+
+
+def _clave(path):
+    """Clave en Supabase = ruta del archivo relativa a la carpeta 'chats' (incluye el id del visitante)."""
+    return os.path.relpath(path, os.path.join(BASE_DIR, "chats")).replace(os.sep, "/")
+
+
+def _sb_leer(path):
+    if not SUPABASE_ON:
+        return None
     try:
-        with open(path, "r", encoding="utf-8") as f:
-            return json.load(f)
-    except Exception:
-        return default
+        r = requests.get(f"{SUPABASE_URL}/rest/v1/{SUPABASE_TABLA}", headers=_sb_headers(),
+                         params={"key": f"eq.{_clave(path)}", "select": "data"}, timeout=8)
+        r.raise_for_status()
+        filas = r.json()
+        return filas[0]["data"] if filas else None
+    except Exception as e:
+        print(f"[Supabase] No se pudo leer {_clave(path)}: {e}")
+        return None
 
 
-def _escribir_json(path, data):
+def _sb_escribir(path, data):
+    if not SUPABASE_ON:
+        return
+    try:
+        r = requests.post(f"{SUPABASE_URL}/rest/v1/{SUPABASE_TABLA}", headers=_sb_headers(
+            {"Prefer": "resolution=merge-duplicates,return=minimal"}),
+            params={"on_conflict": "key"},
+            json={"key": _clave(path), "data": data,
+                  "updated_at": datetime.now(ZoneInfo("UTC")).isoformat()}, timeout=8)
+        r.raise_for_status()
+    except Exception as e:
+        print(f"[Supabase] No se pudo guardar {_clave(path)}: {e}")
+
+
+def _sb_borrar(path):
+    if not SUPABASE_ON:
+        return
+    try:
+        requests.delete(f"{SUPABASE_URL}/rest/v1/{SUPABASE_TABLA}", headers=_sb_headers(),
+                        params={"key": f"eq.{_clave(path)}"}, timeout=8).raise_for_status()
+    except Exception as e:
+        print(f"[Supabase] No se pudo borrar {_clave(path)}: {e}")
+
+
+def _escribir_local(path, data):
     tmp = path + ".tmp"
     with open(tmp, "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False)
     os.replace(tmp, path)
+
+
+def _leer_json(path, default):
+    """Lee el archivo local; si no existe, lo recupera de Supabase (y lo deja en disco)."""
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except Exception:
+        pass
+    data = _sb_leer(path)
+    if data is None:
+        return default
+    try:
+        _escribir_local(path, data)
+    except Exception:
+        pass
+    return data
+
+
+def _escribir_json(path, data):
+    _escribir_local(path, data)
+    _sb_escribir(path, data)
+
+
+def sincronizar_memoria(cid):
+    """Copia a Supabase el archivo de memoria del chat (lo escribe PersistentMemory en disco)."""
+    if SUPABASE_ON:
+        data = _leer_json(ruta_memoria(cid), None)
+        if data is not None:
+            _sb_escribir(ruta_memoria(cid), data)
 
 
 def cargar_indice():
@@ -230,6 +326,7 @@ def crear_chat():
 def abrir_chat(cid):
     """Carga la memoria y la conversacion visible (con sus graficas) de un chat."""
     st.session_state.chat_id = cid
+    _leer_json(ruta_memoria(cid), None)   # si el archivo local no existe, lo trae de Supabase
     st.session_state.memory = PersistentMemory(
         client=client, filepath=ruta_memoria(cid), recent_limit=MEMORY_RECENT_LIMIT
     )
@@ -241,14 +338,16 @@ def abrir_chat(cid):
                 figuras.append(pio.from_json(fj))
             except Exception:
                 pass
-        historial.append({"role": m["role"], "content": m["content"], "figuras": figuras})
+        historial.append({"role": m["role"], "content": m["content"], "figuras": figuras,
+                          "fuentes": m.get("fuentes", [])})
     st.session_state.chat_history = historial
 
 
 def guardar_ui(cid, historial):
     datos = [
         {"role": m["role"], "content": m["content"],
-         "figuras": [f.to_json() for f in m.get("figuras", [])]}
+         "figuras": [f.to_json() for f in m.get("figuras", [])],
+         "fuentes": m.get("fuentes", [])}
         for m in historial
     ]
     _escribir_json(ruta_ui(cid), datos)
@@ -274,6 +373,7 @@ def eliminar_chat(cid):
     indice = [c for c in cargar_indice() if c["id"] != cid]
     _escribir_json(INDEX_FILE, indice)
     for ruta in (ruta_memoria(cid), ruta_ui(cid)):
+        _sb_borrar(ruta)
         try:
             if os.path.exists(ruta):
                 os.remove(ruta)
@@ -465,7 +565,7 @@ def estilo_base(fig, titulo, subtitulo="", altura=340, eje_y=True):
                    font=dict(size=16, color=STRONG, family=FUENTE)),
         height=altura,
         paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-        margin=dict(l=8, r=64, t=76, b=36),
+        margin=dict(l=8, r=64, t=76, b=52),
         font=dict(family=FUENTE, color=MUTED, size=12),
         showlegend=False,
         hovermode="x",
@@ -475,6 +575,7 @@ def estilo_base(fig, titulo, subtitulo="", altura=340, eje_y=True):
     fig.update_xaxes(
         showgrid=False, zeroline=False, showline=True, linecolor=GRID,
         ticks="outside", tickcolor=GRID, ticklen=4, tickfont=dict(color=MUTED),
+        automargin=True,
     )
     fig.update_yaxes(
         side="right", visible=eje_y, showgrid=True, gridcolor=GRID, griddash="dot",
@@ -803,8 +904,27 @@ def compactar_para_modelo(name, result):
     return compacto
 
 
-def process_response(client: Groq, memory_messages: list, summary: str, user_text: str):
-    """Devuelve (texto_final, lista_de_figuras)."""
+FUENTES = {
+    "consultar_tipo_cambio_api": "open.er-api.com",
+    "consultar_serie_historica_indicador_api": "Banco Mundial",
+    "consultar_precio_accion_api": "Yahoo Finance",
+    "calcular_variacion_porcentual": "Cálculo propio",
+    "calcular_estadisticas_descriptivas": "Cálculo propio",
+}
+
+ETAPAS = {
+    "consultar_tipo_cambio_api": "Consultando el tipo de cambio",
+    "consultar_serie_historica_indicador_api": "Descargando la serie del Banco Mundial",
+    "consultar_precio_accion_api": "Consultando precios en Yahoo Finance",
+    "calcular_variacion_porcentual": "Calculando variaciones",
+    "calcular_estadisticas_descriptivas": "Calculando estadísticas descriptivas",
+}
+
+
+def process_response(client: Groq, memory_messages: list, summary: str, user_text: str,
+                     on_tool=None, fuentes=None):
+    """Devuelve (texto_final, lista_de_figuras). Opcionales: on_tool(nombre) avisa cada
+    herramienta que se usa y fuentes (lista) recibe las fuentes de datos consultadas."""
     system_content = SYSTEM_PROMPT
     if summary:
         system_content += (
@@ -856,7 +976,13 @@ def process_response(client: Groq, memory_messages: list, summary: str, user_tex
             except json.JSONDecodeError:
                 args = {}
 
+            if on_tool:
+                on_tool(name)
             result = ejecutar_herramienta(name, args)
+            fuente = FUENTES.get(name)
+            if fuentes is not None and fuente and fuente not in fuentes \
+                    and not (isinstance(result, str) and result.startswith("ERROR")):
+                fuentes.append(fuente)
 
             # Fechas de la ultima accion consultada: sirven para el eje de las variaciones
             if name == "consultar_precio_accion_api" and isinstance(result, dict) and result.get("_ohlcv"):
@@ -880,13 +1006,18 @@ def process_response(client: Groq, memory_messages: list, summary: str, user_tex
 # MOSTRAR CONVERSACION
 # =========================
 
-PLOT_CONFIG = {"displayModeBar": False}
+PLOT_CONFIG = {
+    "displaylogo": False,
+    "displayModeBar": "hover",
+    "modeBarButtons": [["toImage"]],     # solo el boton de descargar como imagen
+    "toImageButtonOptions": {"format": "png", "filename": "macroscopio", "scale": 2},
+}
 
 EJEMPLOS = [
-    "¿Cuál es el tipo de cambio del euro?",
-    "Dame el crecimiento del PIB de Guatemala de 2018 a 2023",
-    "¿Qué tan volátil ha sido NVIDIA en el último mes?",
-    "Compará el PIB de Guatemala y Costa Rica de 2018 a 2023",
+    ("Tipo de cambio", "¿Cuál es el tipo de cambio del euro?"),
+    ("Indicadores macro", "Dame el crecimiento del PIB de Guatemala de 2018 a 2023"),
+    ("Acciones", "¿Qué tan volátil ha sido NVIDIA en el último mes?"),
+    ("Comparar países", "Compará el PIB de Guatemala y Costa Rica de 2018 a 2023"),
 ]
 
 
@@ -907,10 +1038,24 @@ with st.sidebar:
               on_click=nuevo_chat, key="btn_nuevo")
 
     indice = cargar_indice()
-    if indice:
-        st.markdown('<div class="side-title">Recientes</div>', unsafe_allow_html=True)
 
+    def _grupo(chat):
+        try:
+            dias = (datetime.now().date() - datetime.fromisoformat(chat.get("updated", "")).date()).days
+        except Exception:
+            return "Anteriores"
+        if dias <= 0:
+            return "Hoy"
+        if dias == 1:
+            return "Ayer"
+        return "Últimos 7 días" if dias <= 7 else "Anteriores"
+
+    grupo_actual = None
     for chat in indice:
+        grupo = _grupo(chat)
+        if grupo != grupo_actual:
+            st.markdown(f'<div class="side-title">{grupo}</div>', unsafe_allow_html=True)
+            grupo_actual = grupo
         col_chat, col_menu = st.columns([6, 1], gap="small", vertical_alignment="center")
         with col_chat:
             st.button(
@@ -931,7 +1076,8 @@ with st.sidebar:
 
     st.markdown(
         f'<div class="side-foot"><b>{AUTOR}</b><br>{CURSO}<br>'
-        'Fuentes: Banco Mundial, Yahoo Finance, open.er-api</div>',
+        'Fuentes: Banco Mundial, Yahoo Finance, open.er-api'
+        + ('<br>Chats guardados en Supabase' if SUPABASE_ON else '') + '</div>',
         unsafe_allow_html=True,
     )
 
@@ -947,13 +1093,14 @@ consulta_pendiente = st.session_state.pop("pending_query", None)
 if not st.session_state.chat_history and not consulta_pendiente:
     st.markdown(
         f'<div class="hero"><div class="name">{APP_NAME}</div>'
-        f'<div class="sub">{APP_TAGLINE}</div></div>',
+        f'<div class="sub">{APP_TAGLINE}</div>'
+        '<div class="sub2">Datos del Banco Mundial, Yahoo Finance y open.er-api, con gráficas.</div></div>',
         unsafe_allow_html=True,
     )
     columnas = st.columns(2)
-    for i, ejemplo in enumerate(EJEMPLOS):
+    for i, (categoria, ejemplo) in enumerate(EJEMPLOS):
         with columnas[i % 2]:
-            if st.button(ejemplo, key=f"ej_{i}", use_container_width=True):
+            if st.button(f"**{categoria}**  \n{ejemplo}", key=f"ej_{i}", use_container_width=True):
                 st.session_state.pending_query = ejemplo
                 st.rerun()
 
@@ -961,6 +1108,8 @@ for idx, message in enumerate(st.session_state.chat_history):
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
         mostrar_figuras(message.get("figuras", []), f"fig_{chat_id}_{idx}")
+        if message.get("fuentes"):
+            st.caption("Fuentes: " + " · ".join(message["fuentes"]))
 
 
 # =========================
@@ -988,13 +1137,21 @@ if user_text:
 
         with st.chat_message("assistant"):
 
-            with st.spinner("Consultando fuentes y calculando..."):
+            fuentes = []
+            with st.status("Analizando tu consulta…", expanded=True) as estado:
+                def al_usar_herramienta(nombre):
+                    estado.write(ETAPAS.get(nombre, nombre) + "…")
+
                 assistant_text, figuras = process_response(
-                    client, memory.messages(), memory.summary, user_text
+                    client, memory.messages(), memory.summary, user_text,
+                    on_tool=al_usar_herramienta, fuentes=fuentes,
                 )
+                estado.update(label="Listo", state="complete", expanded=False)
 
             st.markdown(assistant_text)
             mostrar_figuras(figuras, "fig_nueva")
+            if fuentes:
+                st.caption("Fuentes: " + " · ".join(fuentes))
 
         # =========================
         # ACTUALIZAR MEMORIA Y GUARDAR EL CHAT
@@ -1003,9 +1160,11 @@ if user_text:
         with st.spinner("Guardando..."):
             memory.add("user", user_text)
             memory.add("assistant", assistant_text)
+            sincronizar_memoria(st.session_state.chat_id)
 
         st.session_state.chat_history.append(
-            {"role": "assistant", "content": assistant_text, "figuras": figuras}
+            {"role": "assistant", "content": assistant_text, "figuras": figuras,
+             "fuentes": fuentes}
         )
         guardar_ui(chat_id, st.session_state.chat_history)
         registrar_chat(chat_id, user_text if es_primer_mensaje else "")
