@@ -64,16 +64,18 @@ CURSO = "Data Analytics · Universidad Rafael Landívar"
 
 # Paleta (inspirada en terminales de trading)
 BG = "#FFFFFF"        # fondo de graficas y tarjetas
-APP_BG = "#FAF9F5"    # fondo de la app
-PANEL = "#F0EEE6"     # sidebar
-HOVER = "#E8E6DC"     # elemento activo / hover
-GRID = "#E6E4DC"      # lineas y bordes
-TXT = "#3D3D3A"       # texto principal
-STRONG = "#1F1E1D"    # titulos
-MUTED = "#73726C"     # texto secundario
-BLUE = "#4C72B0"      # acento de graficas (azul seaborn)
-UP = "#55A868"        # sube (verde seaborn)
-DOWN = "#C44E52"      # baja (rojo seaborn)
+APP_BG = "#FFFFFF"    # fondo de la app (blanco)
+PANEL = "#F4F6F8"     # sidebar y paneles
+HOVER = "#E9EDF2"     # elemento activo / hover
+GRID = "#E2E6EB"      # lineas y bordes
+TXT = "#2A2F37"       # texto principal
+STRONG = "#0B1220"    # titulos
+MUTED = "#6B7480"     # texto secundario
+BLUE = "#1F4E9C"      # acento (azul terminal)
+NAVY = "#0B2545"      # cabeceras de paneles
+AMBER = "#F59E0B"     # acento ambar (guino a la terminal)
+UP = "#0F9D58"        # sube
+DOWN = "#D93025"      # baja
 
 st.set_page_config(
     page_title=f"{APP_NAME}",
@@ -101,13 +103,13 @@ html, body, [class*="css"], .stApp, .stMarkdown, button, input, textarea {{
 [data-testid="stChatInputSubmitButton"] svg, [data-testid="stChatInputSubmitButton"] svg path:last-child {{ color: {MUTED} !important; fill: {MUTED} !important; }}
 [data-testid="stChatInputSubmitButton"]:not(:disabled) {{ background: {STRONG} !important; }}
 [data-testid="stChatInputSubmitButton"]:not(:disabled) svg, [data-testid="stChatInputSubmitButton"]:not(:disabled) svg path:last-child {{ color: #FFFFFF !important; fill: #FFFFFF !important; }}
-.block-container {{ max-width: 760px; padding-top: 2.5rem; padding-bottom: 8rem; }}
+.block-container {{ max-width: 920px; padding-top: 1.6rem; padding-bottom: 8rem; }}
 
 /* Mensajes: sin avatares, el usuario en tarjeta, el agente en texto limpio */
 [data-testid^="stChatMessageAvatar"] {{ display: none !important; }}
 [data-testid="stChatMessage"] {{ background: transparent; padding: 0.5rem 0; gap: 0; }}
 [data-testid="stChatMessage"]:has([data-testid="stChatMessageAvatarUser"]) {{
-    background: {PANEL}; border-radius: 14px; padding: 0.75rem 1.1rem; margin-top: 1rem;
+    background: {PANEL}; border-radius: 8px; padding: 0.75rem 1.1rem; margin-top: 1rem;
 }}
 [data-testid="stChatMessage"] p, [data-testid="stChatMessage"] li {{ line-height: 1.7; color: {TXT}; font-size: 1rem; }}
 [data-testid="stChatMessage"] strong {{ color: {STRONG}; }}
@@ -118,24 +120,24 @@ code {{ font-family: 'IBM Plex Mono', monospace !important; background: {PANEL} 
 /* Entrada de chat */
 [data-testid="stBottom"], [data-testid="stBottom"] > div {{ background: {APP_BG}; }}
 [data-testid="stChatInput"] {{
-    background: {BG}; border: 1px solid {GRID}; border-radius: 18px;
-    box-shadow: 0 2px 10px rgba(31,30,29,0.06);
+    background: {BG}; border: 1px solid {GRID}; border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(11,18,32,0.06);
 }}
 [data-testid="stChatInput"] textarea {{ color: {STRONG}; }}
-[data-testid="stChatInput"]:focus-within {{ border-color: #BDBAAE; }}
+[data-testid="stChatInput"]:focus-within {{ border-color: #AEB6C2; }}
 
 /* Sidebar */
 [data-testid="stSidebar"] {{ background: {PANEL}; border-right: 1px solid {GRID}; }}
 [data-testid="stSidebar"] * {{ color: {TXT}; }}
-.side-brand {{ font-family: 'Source Serif 4', serif; font-size: 1.35rem; font-weight: 600; color: {STRONG}; margin: 0.2rem 0 1rem 0.2rem; }}
-.side-brand .dot {{ width: 8px; height: 8px; border-radius: 50%; background: {UP}; display: inline-block; margin-right: 8px; vertical-align: middle; }}
+.side-brand {{ font-family: 'IBM Plex Mono', monospace; text-transform: uppercase; letter-spacing: 0.14em; font-size: 0.98rem; font-weight: 600; color: {STRONG}; margin: 0.2rem 0 1rem 0.2rem; }}
+.side-brand .dot {{ width: 9px; height: 9px; border-radius: 1px; background: {AMBER}; display: inline-block; margin-right: 8px; vertical-align: middle; }}
 .side-title {{ font-size: 0.78rem; color: {MUTED}; margin: 1.4rem 0 0.3rem 0.4rem; }}
 .side-foot {{ margin-top: 2rem; padding-top: 0.9rem; border-top: 1px solid {GRID}; font-size: 0.8rem; color: {MUTED}; line-height: 1.6; }}
 .side-foot b {{ color: {STRONG}; font-weight: 500; }}
 
 /* Botones del sidebar: lista limpia, sin bordes */
 [data-testid="stSidebar"] .stButton > button {{
-    background: transparent; border: none; box-shadow: none; border-radius: 8px;
+    background: transparent; border: none; box-shadow: none; border-radius: 6px;
     justify-content: flex-start; padding: 0.45rem 0.6rem; font-weight: 400; color: {TXT};
 }}
 [data-testid="stSidebar"] .stButton > button:hover {{ background: {HOVER}; color: {STRONG}; }}
@@ -151,26 +153,27 @@ code {{ font-family: 'IBM Plex Mono', monospace !important; background: {PANEL} 
 
 /* Botones del area principal (sugerencias) */
 .stButton > button {{
-    background: {BG}; color: {TXT}; border: 1px solid {GRID}; border-radius: 12px;
+    background: {BG}; color: {TXT}; border: 1px solid {GRID}; border-radius: 6px;
     justify-content: flex-start; text-align: left; font-weight: 400; padding: 0.7rem 0.9rem;
     transition: border-color .15s, background .15s;
 }}
 .stButton > button div[data-testid="stMarkdownContainer"] {{ width: 100%; text-align: left; }}
-.stButton > button:hover {{ border-color: #BDBAAE; background: {PANEL}; color: {STRONG}; }}
+.stButton > button:hover {{ border-color: #AEB6C2; background: {PANEL}; color: {STRONG}; }}
 .stButton > button:focus-visible {{ outline: 2px solid {BLUE}; }}
 
 /* Estado vacio */
 .hero {{ text-align: center; margin: 14vh 0 2.2rem 0; }}
-.hero .name {{ font-family: 'Source Serif 4', serif; font-size: 2.6rem; font-weight: 500; color: {STRONG}; letter-spacing: -0.01em; }}
+.hero .name {{ font-family: 'IBM Plex Mono', monospace; text-transform: uppercase; font-size: 2.3rem; font-weight: 500; color: {STRONG}; letter-spacing: 0.16em; }}
+.hero .name::after {{ content: ''; display: block; width: 54px; height: 3px; background: {AMBER}; margin: 0.7rem auto 0.2rem auto; }}
 .hero .sub {{ color: {MUTED}; margin-top: 0.4rem; font-size: 1.02rem; }}
 
-[data-testid="stExpander"] {{ border: 1px solid {GRID}; border-radius: 10px; background: {BG}; }}
+[data-testid="stExpander"] {{ border: 1px solid {GRID}; border-radius: 6px; background: {BG}; }}
 
 /* Forzar tema claro aunque el sistema/navegador este en modo oscuro */
 :root {{ color-scheme: light; }}
 .stButton > button {{ background: {BG} !important; color: {TXT} !important; border: 1px solid {GRID} !important; }}
 .stButton > button p {{ color: {TXT} !important; }}
-.stButton > button:hover {{ background: {PANEL} !important; border-color: #BDBAAE !important; }}
+.stButton > button:hover {{ background: {PANEL} !important; border-color: #AEB6C2 !important; }}
 [data-testid="stChatInput"], [data-testid="stChatInput"] > div, [data-testid="stChatInput"] div[data-baseweb] {{ background: {BG} !important; }}
 [data-testid="stChatInput"] textarea {{ color: {STRONG} !important; -webkit-text-fill-color: {STRONG} !important; background: transparent !important; }}
 [data-testid="stChatInput"] textarea::placeholder {{ color: {MUTED} !important; -webkit-text-fill-color: {MUTED} !important; }}
@@ -192,36 +195,56 @@ code {{ font-family: 'IBM Plex Mono', monospace !important; background: {PANEL} 
 .block-container .stButton > button p strong {{ color: {MUTED}; font-weight: 500; font-size: 0.82rem; }}
 .hero .sub2 {{ color: {MUTED}; font-size: 0.88rem; margin-top: 0.35rem; opacity: 0.85; }}
 [data-testid="stCaptionContainer"] {{ color: {MUTED}; }}
-[data-testid="stStatusWidget"], [data-testid="stExpander"] details {{ border-radius: 10px; }}
+[data-testid="stStatusWidget"], [data-testid="stExpander"] details {{ border-radius: 6px; }}
 .modebar {{ opacity: 0.55; }}
 .modebar-btn {{ font-size: 18px !important; }}
 
 /* ===== Interfaz moderna ===== */
-.hero {{ margin: 6vh 0 1.6rem 0; }}
-.hero .name {{ font-size: 2.9rem; }}
 .mk-title {{ font-size: 0.78rem; color: {MUTED}; margin: 0 0 0.45rem 0.15rem; letter-spacing: 0.04em; text-transform: uppercase; display: flex; align-items: center; gap: 6px; }}
 .mk-title .live {{ width: 7px; height: 7px; border-radius: 50%; background: {UP}; animation: pulso 2s infinite; }}
 @keyframes pulso {{ 0% {{ box-shadow: 0 0 0 0 rgba(85,168,104,.55); }} 70% {{ box-shadow: 0 0 0 7px rgba(85,168,104,0); }} 100% {{ box-shadow: 0 0 0 0 rgba(85,168,104,0); }} }}
-.mk-row {{ display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 1.5rem; }}
-@media (max-width: 640px) {{ .mk-row {{ grid-template-columns: repeat(2, 1fr); }} }}
-.mk {{ background: {BG}; border: 1px solid {GRID}; border-radius: 14px; padding: 0.7rem 0.8rem 0.5rem 0.8rem; box-shadow: 0 1px 3px rgba(31,30,29,0.04); transition: transform .15s, box-shadow .15s, border-color .15s; }}
-.mk:hover {{ transform: translateY(-2px); box-shadow: 0 6px 16px rgba(31,30,29,0.08); border-color: #D2CFC3; }}
-.mk-n {{ font-size: 0.74rem; color: {MUTED}; }}
-.mk-p {{ font-family: 'IBM Plex Mono', monospace; font-size: 1.02rem; color: {STRONG}; font-weight: 500; margin-top: 2px; }}
-.mk-d {{ font-family: 'IBM Plex Mono', monospace; font-size: 0.76rem; margin-top: 1px; }}
-.mk .spark {{ width: 100%; height: 28px; margin-top: 4px; display: block; }}
-.block-container .stButton > button {{ box-shadow: 0 1px 3px rgba(31,30,29,0.04); transition: transform .15s, box-shadow .15s, border-color .15s, background .15s; }}
-.block-container .stButton > button:hover {{ transform: translateY(-2px); box-shadow: 0 6px 16px rgba(31,30,29,0.08); }}
-[data-testid="stChatInput"] {{ box-shadow: 0 4px 18px rgba(31,30,29,0.08); border-radius: 20px; }}
+.block-container .stButton > button {{ box-shadow: 0 1px 3px rgba(11,18,32,0.04); transition: transform .15s, box-shadow .15s, border-color .15s, background .15s; }}
+.block-container .stButton > button:hover {{ transform: translateY(-2px); box-shadow: 0 6px 16px rgba(11,18,32,0.08); }}
+[data-testid="stChatInput"] {{ box-shadow: 0 2px 10px rgba(11,18,32,0.07); border-radius: 8px; }}
 [data-testid="stChatMessage"]:has([data-testid="stChatMessageAvatarUser"]) {{ border: 1px solid {GRID}; }}
-[data-testid="stStatus"], [data-testid="stStatusWidget"] {{ border: 1px solid {GRID} !important; border-radius: 12px !important; background: {BG} !important; }}
+[data-testid="stStatus"], [data-testid="stStatusWidget"] {{ border: 1px solid {GRID} !important; border-radius: 6px !important; background: {BG} !important; }}
 [data-testid="stStatus"] summary, [data-testid="stStatus"] summary * {{ color: {TXT} !important; }}
 
 /* Sugerencias de seguimiento (chips) */
 .block-container .st-key-chips {{ display: flex !important; flex-direction: row !important; flex-wrap: wrap !important; gap: 0.5rem !important; margin: 0.4rem 0 0 0; }}
 .block-container .st-key-chips > div {{ width: auto !important; flex: 0 0 auto !important; }}
-.block-container .st-key-chips .stButton > button {{ min-height: 0 !important; padding: 0.35rem 0.95rem !important; border-radius: 999px !important; font-size: 0.85rem; align-items: center; }}
+.block-container .st-key-chips .stButton > button {{ min-height: 0 !important; padding: 0.35rem 0.95rem !important; border-radius: 4px !important; font-size: 0.82rem; font-family: "IBM Plex Mono", monospace; align-items: center; }}
 .block-container .st-key-chips .stButton > button p {{ white-space: nowrap !important; font-size: 0.85rem; }}
+
+/* ===== Estilo terminal (blanco) ===== */
+.hero {{ margin: 3.5vh 0 1.4rem 0; }}
+.mk-title {{ font-family: 'IBM Plex Mono', monospace; font-size: 0.72rem; letter-spacing: 0.1em; color: {MUTED}; margin: 1.1rem 0 0.4rem 0; }}
+.tape {{ overflow: hidden; border-top: 1px solid {GRID}; border-bottom: 1px solid {GRID}; background: {PANEL}; margin: 0 0 0.6rem 0; white-space: nowrap; }}
+.tape-in {{ display: inline-flex; animation: cinta 80s linear infinite; }}
+.tape:hover .tape-in {{ animation-play-state: paused; }}
+@keyframes cinta {{ from {{ transform: translateX(0); }} to {{ transform: translateX(-50%); }} }}
+.ti {{ font-family: 'IBM Plex Mono', monospace; font-size: 0.74rem; padding: 0.42rem 1.3rem; color: {TXT}; border-right: 1px solid {GRID}; }}
+.ti b {{ color: {STRONG}; font-weight: 600; margin-right: 0.5rem; }}
+.ti i {{ font-style: normal; margin-left: 0.45rem; }}
+.mt-grid {{ display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 0.4rem; }}
+@media (max-width: 760px) {{ .mt-grid {{ grid-template-columns: 1fr; }} }}
+.mt {{ border: 1px solid {GRID}; border-radius: 4px; background: {BG}; overflow: hidden; }}
+.mt-head {{ background: {NAVY}; color: #FFFFFF; font-family: 'IBM Plex Mono', monospace; font-size: 0.7rem; letter-spacing: 0.1em; padding: 0.38rem 0.7rem; display: flex; justify-content: space-between; align-items: center; }}
+.mt-head .live {{ color: {AMBER}; display: flex; align-items: center; gap: 6px; }}
+.mt-head .live::before {{ content: ''; width: 6px; height: 6px; border-radius: 50%; background: {AMBER}; animation: pulso 2s infinite; }}
+@keyframes pulso {{ 0% {{ box-shadow: 0 0 0 0 rgba(245,158,11,.6); }} 70% {{ box-shadow: 0 0 0 6px rgba(245,158,11,0); }} 100% {{ box-shadow: 0 0 0 0 rgba(245,158,11,0); }} }}
+.mt-cols, .mt-row {{ display: grid; grid-template-columns: minmax(0,1.5fr) 1fr 0.8fr 0.8fr 56px; align-items: center; column-gap: 8px; padding: 0 0.7rem; }}
+.mt-cols {{ font-family: 'IBM Plex Mono', monospace; font-size: 0.64rem; letter-spacing: 0.06em; color: {MUTED}; border-bottom: 1px solid {GRID}; padding-top: 0.3rem; padding-bottom: 0.3rem; text-transform: uppercase; }}
+.mt-cols span:not(:first-child), .mt-row span:not(:first-child) {{ text-align: right; }}
+.mt-row {{ height: 34px; border-bottom: 1px solid {PANEL}; font-family: 'IBM Plex Mono', monospace; font-size: 0.8rem; transition: background .12s; }}
+.mt-row:last-child {{ border-bottom: none; }}
+.mt-row:hover {{ background: {PANEL}; }}
+.mt-row .n {{ font-family: 'IBM Plex Sans', sans-serif; font-size: 0.82rem; color: {STRONG}; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }}
+.mt-row .p {{ color: {STRONG}; }}
+.mt-row .spark {{ width: 56px; height: 20px; display: block; }}
+.block-container .stButton > button:hover {{ border-left: 3px solid {NAVY} !important; }}
+[data-testid="stBottomBlockContainer"] {{ max-width: 920px !important; }}
+[data-testid="stChatInput"] textarea {{ font-family: 'IBM Plex Mono', monospace !important; font-size: 0.9rem !important; }}
 </style>
 """, unsafe_allow_html=True)
 
@@ -620,7 +643,7 @@ def estilo_base(fig, titulo, subtitulo="", altura=340, eje_y=True):
         automargin=True,
     )
     fig.update_xaxes(showspikes=True, spikemode="across", spikesnap="cursor",
-                     spikethickness=1, spikecolor="#BDBAAE", spikedash="dot")
+                     spikethickness=1, spikecolor="#AEB6C2", spikedash="dot")
     fig.update_yaxes(
         side="right", visible=eje_y, showgrid=True, gridcolor=GRID, griddash="dot",
         gridwidth=1, zeroline=False, showline=False,
@@ -1051,8 +1074,16 @@ def process_response(client: Groq, memory_messages: list, summary: str, user_tex
 # PANEL DE MERCADOS (pantalla de inicio)
 # =========================
 
-MERCADO = [("S&amp;P 500", "^GSPC", "idx"), ("Nasdaq 100", "^NDX", "idx"),
-           ("Oro", "GC=F", "usd"), ("USD / GTQ", "GTQ=X", "fx")]
+GRUPOS_MERCADO = [
+    ("Renta variable y cripto", [
+        ("S&amp;P 500", "^GSPC", "idx"), ("Nasdaq 100", "^NDX", "idx"),
+        ("Dow Jones", "^DJI", "idx"), ("VIX", "^VIX", "idx"),
+        ("Bitcoin", "BTC-USD", "usd0")]),
+    ("Divisas, materias primas y tasas", [
+        ("EUR / USD", "EURUSD=X", "fx"), ("USD / GTQ", "GTQ=X", "fx"),
+        ("Oro", "GC=F", "usd"), ("Petróleo WTI", "CL=F", "usd"),
+        ("Bono EE. UU. 10a", "^TNX", "yld")]),
+]
 
 
 def _tarjeta_mercado(simbolo):
@@ -1064,20 +1095,23 @@ def _tarjeta_mercado(simbolo):
     cierres = [c for c in res["indicators"]["quote"][0]["close"] if c is not None]
     precio = res["meta"].get("regularMarketPrice") or cierres[-1]
     previo = cierres[-2] if len(cierres) > 1 else cierres[0]
-    return {"precio": precio, "cambio": (precio / previo - 1) * 100 if previo else 0.0,
-            "serie": cierres}
+    return {"precio": precio, "abs": precio - previo,
+            "pct": (precio / previo - 1) * 100 if previo else 0.0, "serie": cierres}
 
 
 @st.cache_data(ttl=600, show_spinner=False)
 def datos_mercado():
+    """Devuelve {simbolo: datos} para todos los instrumentos que se pudieron consultar."""
+    todos = [m for _, lista in GRUPOS_MERCADO for m in lista]
+
     def uno(m):
         try:
-            return {"nombre": m[0], "tipo": m[2], **_tarjeta_mercado(m[1])}
+            return m[1], _tarjeta_mercado(m[1])
         except Exception as e:
             print(f"[Mercado] {m[1]}: {e}")
-            return None
-    with ThreadPoolExecutor(max_workers=4) as ex:
-        return [x for x in ex.map(uno, MERCADO) if x]
+            return m[1], None
+    with ThreadPoolExecutor(max_workers=8) as ex:
+        return {k: v for k, v in ex.map(uno, todos) if v}
 
 
 def _spark(serie, color):
@@ -1094,27 +1128,64 @@ def _spark(serie, color):
             f'vector-effect="non-scaling-stroke"/></svg>')
 
 
+def _formato(tipo, d):
+    p, a = d["precio"], d["abs"]
+    if tipo == "fx":
+        return f"{p:.4f}", f"{a:+.4f}"
+    if tipo == "usd":
+        return f"${p:,.2f}", f"{a:+,.2f}"
+    if tipo == "usd0":
+        return f"${p:,.0f}", f"{a:+,.0f}"
+    if tipo == "yld":
+        return f"{p:.3f}%", f"{a:+.3f}"
+    return f"{p:,.2f}", f"{a:+,.2f}"
+
+
 def panel_mercados_html():
     datos = datos_mercado()
     if not datos:
         return ""
-    tarjetas = []
-    for d in datos:
-        color = UP if d["cambio"] >= 0 else DOWN
-        flecha = "▲" if d["cambio"] >= 0 else "▼"
-        if d["tipo"] == "fx":
-            precio = f"Q{d['precio']:.4f}"
-        elif d["tipo"] == "usd":
-            precio = f"${d['precio']:,.2f}"
-        else:
-            precio = f"{d['precio']:,.2f}"
-        tarjetas.append(
-            f'<div class="mk"><div class="mk-n">{d["nombre"]}</div>'
-            f'<div class="mk-p">{precio}</div>'
-            f'<div class="mk-d" style="color:{color}">{flecha} {d["cambio"]:+.2f}%</div>'
-            f'{_spark(d["serie"], color)}</div>')
-    return ('<div class="mk-title"><span class="live"></span>Mercados</div>'
-            f'<div class="mk-row">{"".join(tarjetas)}</div>')
+    paneles = []
+    for titulo, lista in GRUPOS_MERCADO:
+        filas = []
+        for nombre, simbolo, tipo in lista:
+            d = datos.get(simbolo)
+            if not d:
+                continue
+            color = UP if d["pct"] >= 0 else DOWN
+            precio, var = _formato(tipo, d)
+            filas.append(
+                f'<div class="mt-row"><span class="n">{nombre}</span>'
+                f'<span class="p">{precio}</span>'
+                f'<span style="color:{color}">{var}</span>'
+                f'<span style="color:{color}">{d["pct"]:+.2f}%</span>'
+                f'{_spark(d["serie"], color)}</div>')
+        if filas:
+            paneles.append(
+                f'<div class="mt"><div class="mt-head"><span>{titulo.upper()}</span>'
+                f'<span class="live">EN VIVO</span></div>'
+                '<div class="mt-cols"><span>Instrumento</span><span>Último</span>'
+                '<span>Var.</span><span>Var. %</span><span>1M</span></div>'
+                f'{"".join(filas)}</div>')
+    return f'<div class="mt-grid">{"".join(paneles)}</div>' if paneles else ""
+
+
+def cinta_mercados_html():
+    datos = datos_mercado()
+    items = []
+    for _, lista in GRUPOS_MERCADO:
+        for nombre, simbolo, tipo in lista:
+            d = datos.get(simbolo)
+            if not d:
+                continue
+            color = UP if d["pct"] >= 0 else DOWN
+            flecha = "▲" if d["pct"] >= 0 else "▼"
+            precio, _ = _formato(tipo, d)
+            items.append(f'<span class="ti"><b>{nombre}</b>{precio}'
+                         f'<i style="color:{color}">{flecha} {abs(d["pct"]):.2f}%</i></span>')
+    if not items:
+        return ""
+    return f'<div class="tape"><div class="tape-in">{"".join(items)}{"".join(items)}</div></div>'
 
 
 # =========================
@@ -1232,6 +1303,8 @@ with st.sidebar:
 # CONVERSACION
 # =========================
 
+st.markdown(cinta_mercados_html(), unsafe_allow_html=True)
+
 memory = st.session_state.memory
 chat_id = st.session_state.chat_id
 consulta_pendiente = st.session_state.pop("pending_query", None)
@@ -1244,7 +1317,7 @@ if not st.session_state.chat_history and not consulta_pendiente:
         unsafe_allow_html=True,
     )
     st.markdown(panel_mercados_html(), unsafe_allow_html=True)
-    st.markdown('<div class="mk-title">Probá preguntando</div>', unsafe_allow_html=True)
+    st.markdown('<div class="mk-title">CONSULTAS SUGERIDAS</div>', unsafe_allow_html=True)
     columnas = st.columns(2)
     for i, (categoria, ejemplo) in enumerate(EJEMPLOS):
         with columnas[i % 2]:
