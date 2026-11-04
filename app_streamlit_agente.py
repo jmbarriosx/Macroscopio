@@ -320,6 +320,8 @@ code {{ font-family: 'IBM Plex Mono', monospace !important; background: {PANEL} 
 .st-key-analizar_ficha button {{ background: {NAVY} !important; border: 1px solid {NAVY} !important; }}
 .st-key-analizar_ficha button, .st-key-analizar_ficha button p {{ color: #FFFFFF !important; }}
 .st-key-analizar_ficha button:hover {{ background: {BLUE} !important; border-left: 1px solid {BLUE} !important; }}
+.katex, .katex * {{ color: {STRONG} !important; }}
+.katex-display {{ margin: 0.9rem 0; overflow-x: auto; overflow-y: hidden; }}
 .perfil {{ margin-top: 0.6rem; font-size: 0.8rem; color: {MUTED}; }}
 </style>
 """, unsafe_allow_html=True)
@@ -578,6 +580,14 @@ Reglas:
   datos y las métricas de forma objetiva.
 - Nunca llames herramientas que no estén en esta lista.
 """
+
+REGLA_FORMULAS = r"""
+- Si mostrás una fórmula, escribila en LaTeX entre dobles signos de dólar y en su
+  propia línea, por ejemplo: $$ \text{Media} = \frac{\sum x_i}{n} $$
+  Nunca uses \[ \], \( \) ni corchetes sueltos. Dentro de una fórmula escribí el
+  signo de porcentaje como \%. Los montos de dinero van normales, por ejemplo $211.44.
+"""
+SYSTEM_PROMPT = SYSTEM_PROMPT + REGLA_FORMULAS
 
 TOOLS = [
     {
@@ -1610,9 +1620,30 @@ def pedir(texto):
     st.session_state.pending_query = texto
 
 
+def formatear_respuesta(texto):
+    """Deja las formulas en LaTeX listas para Streamlit ($$...$$) y protege los montos con $."""
+    if not texto:
+        return texto
+    bloques = []
+
+    def guardar(m, inline=False):
+        cuerpo = re.sub(r"(?<!\\)%", r"\\%", m.group(1).strip())
+        bloques.append(f"${cuerpo}$" if inline else f"\n\n$${cuerpo}$$\n\n")
+        return f"\x00{len(bloques) - 1}\x00"
+
+    texto = re.sub(r"\$\$(.+?)\$\$", lambda m: guardar(m), texto, flags=re.S)        # $$ ... $$
+    texto = re.sub(r"\\\[(.+?)\\\]", lambda m: guardar(m), texto, flags=re.S)        # \[ ... \]
+    texto = re.sub(r"\\\((.+?)\\\)", lambda m: guardar(m, True), texto, flags=re.S)  # \( ... \)
+    # lineas  [ \text{...} = ... ]  (el modelo a veces pierde las barras)
+    texto = re.sub(r"(?m)^[ \t]*\[\s*(.*\\[A-Za-z]{2,}.*?)\s*\][ \t]*$", lambda m: guardar(m), texto)
+    # montos: "$211.44" no debe tomarse como inicio de formula
+    texto = re.sub(r"(?<![\\$])\$(?=\d)", r"\\$", texto)
+    return re.sub(r"\x00(\d+)\x00", lambda m: bloques[int(m.group(1))], texto)
+
+
 def tipear(texto):
-    """Efecto de escritura progresiva para las respuestas nuevas."""
-    for trozo in re.findall(r"\S+\s*", texto):
+    """Efecto de escritura progresiva para las respuestas nuevas (las formulas salen completas)."""
+    for trozo in re.findall(r"\$\$.+?\$\$\s*|\S+\s*", texto, flags=re.S):
         yield trozo
         time.sleep(0.012)
 
@@ -1732,7 +1763,7 @@ if _abrir:
 
 for idx, message in enumerate(st.session_state.chat_history):
     with st.chat_message(message["role"]):
-        st.markdown(message["content"])
+        st.markdown(formatear_respuesta(message["content"]))
         mostrar_figuras(message.get("figuras", []), f"fig_{chat_id}_{idx}")
         if message.get("fuentes"):
             st.caption("Fuentes: " + " · ".join(message["fuentes"]))
@@ -1783,7 +1814,7 @@ if user_text:
                 )
                 estado.update(label="Listo", state="complete", expanded=False)
 
-            st.write_stream(tipear(assistant_text))
+            st.write_stream(tipear(formatear_respuesta(assistant_text)))
             mostrar_figuras(figuras, "fig_nueva")
             if fuentes:
                 st.caption("Fuentes: " + " · ".join(fuentes))
