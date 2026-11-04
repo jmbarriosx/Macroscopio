@@ -16,6 +16,10 @@ import os
 import json
 import requests
 import uuid
+import re
+import time
+from concurrent.futures import ThreadPoolExecutor
+from urllib.parse import quote
 
 # Importacion para el manejo de fechas y zonas horarias
 from datetime import datetime
@@ -191,8 +195,36 @@ code {{ font-family: 'IBM Plex Mono', monospace !important; background: {PANEL} 
 [data-testid="stStatusWidget"], [data-testid="stExpander"] details {{ border-radius: 10px; }}
 .modebar {{ opacity: 0.55; }}
 .modebar-btn {{ font-size: 18px !important; }}
+
+/* ===== Interfaz moderna ===== */
+.hero {{ margin: 6vh 0 1.6rem 0; }}
+.hero .name {{ font-size: 2.9rem; }}
+.mk-title {{ font-size: 0.78rem; color: {MUTED}; margin: 0 0 0.45rem 0.15rem; letter-spacing: 0.04em; text-transform: uppercase; display: flex; align-items: center; gap: 6px; }}
+.mk-title .live {{ width: 7px; height: 7px; border-radius: 50%; background: {UP}; animation: pulso 2s infinite; }}
+@keyframes pulso {{ 0% {{ box-shadow: 0 0 0 0 rgba(85,168,104,.55); }} 70% {{ box-shadow: 0 0 0 7px rgba(85,168,104,0); }} 100% {{ box-shadow: 0 0 0 0 rgba(85,168,104,0); }} }}
+.mk-row {{ display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 1.5rem; }}
+@media (max-width: 640px) {{ .mk-row {{ grid-template-columns: repeat(2, 1fr); }} }}
+.mk {{ background: {BG}; border: 1px solid {GRID}; border-radius: 14px; padding: 0.7rem 0.8rem 0.5rem 0.8rem; box-shadow: 0 1px 3px rgba(31,30,29,0.04); transition: transform .15s, box-shadow .15s, border-color .15s; }}
+.mk:hover {{ transform: translateY(-2px); box-shadow: 0 6px 16px rgba(31,30,29,0.08); border-color: #D2CFC3; }}
+.mk-n {{ font-size: 0.74rem; color: {MUTED}; }}
+.mk-p {{ font-family: 'IBM Plex Mono', monospace; font-size: 1.02rem; color: {STRONG}; font-weight: 500; margin-top: 2px; }}
+.mk-d {{ font-family: 'IBM Plex Mono', monospace; font-size: 0.76rem; margin-top: 1px; }}
+.mk .spark {{ width: 100%; height: 28px; margin-top: 4px; display: block; }}
+.block-container .stButton > button {{ box-shadow: 0 1px 3px rgba(31,30,29,0.04); transition: transform .15s, box-shadow .15s, border-color .15s, background .15s; }}
+.block-container .stButton > button:hover {{ transform: translateY(-2px); box-shadow: 0 6px 16px rgba(31,30,29,0.08); }}
+[data-testid="stChatInput"] {{ box-shadow: 0 4px 18px rgba(31,30,29,0.08); border-radius: 20px; }}
+[data-testid="stChatMessage"]:has([data-testid="stChatMessageAvatarUser"]) {{ border: 1px solid {GRID}; }}
+[data-testid="stStatus"], [data-testid="stStatusWidget"] {{ border: 1px solid {GRID} !important; border-radius: 12px !important; background: {BG} !important; }}
+[data-testid="stStatus"] summary, [data-testid="stStatus"] summary * {{ color: {TXT} !important; }}
+
+/* Sugerencias de seguimiento (chips) */
+.block-container .st-key-chips {{ display: flex !important; flex-direction: row !important; flex-wrap: wrap !important; gap: 0.5rem !important; margin: 0.4rem 0 0 0; }}
+.block-container .st-key-chips > div {{ width: auto !important; flex: 0 0 auto !important; }}
+.block-container .st-key-chips .stButton > button {{ min-height: 0 !important; padding: 0.35rem 0.95rem !important; border-radius: 999px !important; font-size: 0.85rem; align-items: center; }}
+.block-container .st-key-chips .stButton > button p {{ white-space: nowrap !important; font-size: 0.85rem; }}
 </style>
 """, unsafe_allow_html=True)
+
 
 
 # =========================
@@ -587,6 +619,8 @@ def estilo_base(fig, titulo, subtitulo="", altura=340, eje_y=True):
         ticks="outside", tickcolor=GRID, ticklen=4, tickfont=dict(color=MUTED),
         automargin=True,
     )
+    fig.update_xaxes(showspikes=True, spikemode="across", spikesnap="cursor",
+                     spikethickness=1, spikecolor="#BDBAAE", spikedash="dot")
     fig.update_yaxes(
         side="right", visible=eje_y, showgrid=True, gridcolor=GRID, griddash="dot",
         gridwidth=1, zeroline=False, showline=False,
@@ -1012,6 +1046,108 @@ def process_response(client: Groq, memory_messages: list, summary: str, user_tex
             "Probá con una pregunta más específica."), figuras
 
 
+
+# =========================
+# PANEL DE MERCADOS (pantalla de inicio)
+# =========================
+
+MERCADO = [("S&amp;P 500", "^GSPC", "idx"), ("Nasdaq 100", "^NDX", "idx"),
+           ("Oro", "GC=F", "usd"), ("USD / GTQ", "GTQ=X", "fx")]
+
+
+def _tarjeta_mercado(simbolo):
+    url = (f"https://query1.finance.yahoo.com/v8/finance/chart/{quote(simbolo)}"
+           "?range=1mo&interval=1d")
+    r = requests.get(url, headers={"User-Agent": "Mozilla/5.0"}, timeout=6)
+    r.raise_for_status()
+    res = r.json()["chart"]["result"][0]
+    cierres = [c for c in res["indicators"]["quote"][0]["close"] if c is not None]
+    precio = res["meta"].get("regularMarketPrice") or cierres[-1]
+    previo = cierres[-2] if len(cierres) > 1 else cierres[0]
+    return {"precio": precio, "cambio": (precio / previo - 1) * 100 if previo else 0.0,
+            "serie": cierres}
+
+
+@st.cache_data(ttl=600, show_spinner=False)
+def datos_mercado():
+    def uno(m):
+        try:
+            return {"nombre": m[0], "tipo": m[2], **_tarjeta_mercado(m[1])}
+        except Exception as e:
+            print(f"[Mercado] {m[1]}: {e}")
+            return None
+    with ThreadPoolExecutor(max_workers=4) as ex:
+        return [x for x in ex.map(uno, MERCADO) if x]
+
+
+def _spark(serie, color):
+    if len(serie) < 2:
+        return ""
+    lo, hi = min(serie), max(serie)
+    rango = (hi - lo) or 1
+    n = len(serie)
+    linea = " ".join(f"{i * 100 / (n - 1):.1f},{26 - (v - lo) / rango * 24:.1f}"
+                     for i, v in enumerate(serie))
+    return (f'<svg class="spark" viewBox="0 0 100 28" preserveAspectRatio="none">'
+            f'<polygon points="0,28 {linea} 100,28" fill="{hex_a_rgba(color, 0.10)}"/>'
+            f'<polyline points="{linea}" fill="none" stroke="{color}" stroke-width="1.6" '
+            f'vector-effect="non-scaling-stroke"/></svg>')
+
+
+def panel_mercados_html():
+    datos = datos_mercado()
+    if not datos:
+        return ""
+    tarjetas = []
+    for d in datos:
+        color = UP if d["cambio"] >= 0 else DOWN
+        flecha = "▲" if d["cambio"] >= 0 else "▼"
+        if d["tipo"] == "fx":
+            precio = f"Q{d['precio']:.4f}"
+        elif d["tipo"] == "usd":
+            precio = f"${d['precio']:,.2f}"
+        else:
+            precio = f"{d['precio']:,.2f}"
+        tarjetas.append(
+            f'<div class="mk"><div class="mk-n">{d["nombre"]}</div>'
+            f'<div class="mk-p">{precio}</div>'
+            f'<div class="mk-d" style="color:{color}">{flecha} {d["cambio"]:+.2f}%</div>'
+            f'{_spark(d["serie"], color)}</div>')
+    return ('<div class="mk-title"><span class="live"></span>Mercados</div>'
+            f'<div class="mk-row">{"".join(tarjetas)}</div>')
+
+
+# =========================
+# SUGERENCIAS DE SEGUIMIENTO
+# =========================
+
+SEGUIMIENTO = {
+    "Yahoo Finance": ["¿Y en los últimos 6 meses?", "Compará con el S&P 500 (SPY)", "¿Qué tan volátil ha sido?"],
+    "Banco Mundial": ["Compará con Costa Rica", "Ahora la inflación", "¿Cuál fue la variación promedio?"],
+    "open.er-api": ["¿Y el yen japonés?", "¿Y el quetzal?", "¿Cuánto es 1,000 dólares en euros?"],
+}
+
+
+def sugerencias(fuentes):
+    out = []
+    for f in fuentes or []:
+        for clave, lista in SEGUIMIENTO.items():
+            if clave in f:
+                out += [x for x in lista if x not in out]
+    return out[:3]
+
+
+def pedir(texto):
+    st.session_state.pending_query = texto
+
+
+def tipear(texto):
+    """Efecto de escritura progresiva para las respuestas nuevas."""
+    for trozo in re.findall(r"\S+\s*", texto):
+        yield trozo
+        time.sleep(0.012)
+
+
 # =========================
 # MOSTRAR CONVERSACION
 # =========================
@@ -1107,6 +1243,8 @@ if not st.session_state.chat_history and not consulta_pendiente:
         '<div class="sub2">Datos del Banco Mundial, Yahoo Finance y open.er-api, con gráficas.</div></div>',
         unsafe_allow_html=True,
     )
+    st.markdown(panel_mercados_html(), unsafe_allow_html=True)
+    st.markdown('<div class="mk-title">Probá preguntando</div>', unsafe_allow_html=True)
     columnas = st.columns(2)
     for i, (categoria, ejemplo) in enumerate(EJEMPLOS):
         with columnas[i % 2]:
@@ -1122,6 +1260,14 @@ for idx, message in enumerate(st.session_state.chat_history):
             st.caption("Fuentes: " + " · ".join(message["fuentes"]))
 
 
+chips_slot = st.empty()
+if st.session_state.chat_history and st.session_state.chat_history[-1]["role"] == "assistant":
+    _sug = sugerencias(st.session_state.chat_history[-1].get("fuentes"))
+    if _sug:
+        with chips_slot.container(key="chips"):
+            for k, texto in enumerate(_sug):
+                st.button(texto, key=f"chip_{chat_id}_{k}", on_click=pedir, args=(texto,))
+
 # =========================
 # ENTRADA DEL USUARIO
 # =========================
@@ -1132,6 +1278,7 @@ if not user_text and consulta_pendiente:
 
 if user_text:
 
+    chips_slot.empty()
     user_text = user_text.strip()
 
     if user_text:
@@ -1158,7 +1305,7 @@ if user_text:
                 )
                 estado.update(label="Listo", state="complete", expanded=False)
 
-            st.markdown(assistant_text)
+            st.write_stream(tipear(assistant_text))
             mostrar_figuras(figuras, "fig_nueva")
             if fuentes:
                 st.caption("Fuentes: " + " · ".join(fuentes))
